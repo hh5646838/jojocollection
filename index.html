@@ -331,6 +331,14 @@
             // 滚动到时间流区域
             timelineSection.scrollIntoView({ behavior: 'smooth' });
             
+            // 先移除所有已存在的返回按钮
+            const existingBackBtns = timelineHeader.querySelectorAll('.sort-controls button');
+            existingBackBtns.forEach(btn => {
+                if (btn.textContent.includes('返回')) {
+                    btn.remove();
+                }
+            });
+            
             // 添加返回按钮
             const backBtn = document.createElement('button');
             backBtn.className = 'sort-btn';
