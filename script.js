@@ -37,10 +37,19 @@ function handleHashScroll() {
 async function loadConfig() {
     try {
         const response = await fetch('config.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         config = await response.json();
+        console.log('Config loaded successfully:', config);
         initVinylPlayer();
     } catch (error) {
         console.error('Error loading config:', error);
+        // 显示错误信息给用户
+        const vinylInfo = document.querySelector('.vinyl-info');
+        if (vinylInfo) {
+            vinylInfo.innerHTML = '<p style="color: #ff6b6b;">加载配置失败，请检查 config.json 文件</p>';
+        }
     }
 }
 
@@ -48,11 +57,24 @@ async function loadConfig() {
 async function loadPosts() {
     try {
         const response = await fetch('posts.json');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         postsData = await response.json();
+        console.log('Posts loaded successfully:', postsData);
         initCollections();
         initTimeline();
     } catch (error) {
         console.error('Error loading posts:', error);
+        // 显示错误信息给用户
+        const bentoGrid = document.getElementById('bento-grid');
+        const timelineList = document.getElementById('timeline-list');
+        if (bentoGrid) {
+            bentoGrid.innerHTML = '<p style="color: #ff6b6b; padding: 2rem;">加载文章数据失败，请检查 posts.json 文件</p>';
+        }
+        if (timelineList) {
+            timelineList.innerHTML = '<p style="color: #ff6b6b; padding: 2rem;">加载文章数据失败，请检查 posts.json 文件</p>';
+        }
     }
 }
 
