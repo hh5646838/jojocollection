@@ -1,0 +1,781 @@
+/* ===== 全局样式 ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+:root {
+    --bg-primary: #0a0a0a;
+    --bg-secondary: #1a1a1a;
+    --bg-tertiary: #2a2a2a;
+    --text-primary: #e0e0e0;
+    --text-secondary: #a0a0a0;
+    --accent: #b8860b;
+    --accent-dark: #8b6914;
+    --bass-wave: #4a4a4a;
+    --vinyl-black: #1a1a1a;
+    --vinyl-groove: #0a0a0a;
+    --article-light-bg: #f5f5f5;
+    --article-light-text: #333333;
+    --article-dark-bg: #0a0a0a;
+    --article-dark-text: #e0e0e0;
+}
+
+body {
+    font-family: 'Noto Serif SC', serif;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+/* 暗黑复古贝斯元素装饰 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(ellipse at 20% 80%, rgba(184, 134, 11, 0.03) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(74, 74, 74, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+/* ===== 首页黑胶唱片区 ===== */
+.vinyl-section {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+    background: linear-gradient(180deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    z-index: 1;
+}
+
+.vinyl-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    width: 100%;
+    max-width: 1200px;
+}
+
+@media (min-width: 768px) {
+    .vinyl-container {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
+
+.vinyl-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.vinyl-record {
+    width: 280px;
+    height: 280px;
+    border-radius: 50%;
+    background: 
+        repeating-radial-gradient(
+            circle at center,
+            var(--vinyl-groove) 0px,
+            var(--vinyl-groove) 2px,
+            var(--vinyl-black) 2px,
+            var(--vinyl-black) 4px
+        );
+    box-shadow: 
+        0 0 0 8px var(--vinyl-black),
+        0 0 0 10px var(--bass-wave),
+        0 20px 40px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+@media (min-width: 768px) {
+    .vinyl-record {
+        width: 350px;
+        height: 350px;
+    }
+}
+
+.vinyl-record.playing {
+    animation: spin 8s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.vinyl-grooves {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: 
+        repeating-radial-gradient(
+            circle at center,
+            transparent 0px,
+            transparent 30px,
+            rgba(255, 255, 255, 0.02) 30px,
+            rgba(255, 255, 255, 0.02) 31px
+        );
+}
+
+.vinyl-center {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: var(--bg-tertiary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    border: 3px solid var(--bass-wave);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+@media (min-width: 768px) {
+    .vinyl-center {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+.vinyl-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+.vinyl-info {
+    text-align: center;
+    max-width: 300px;
+}
+
+.track-title {
+    font-size: 1.5rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+    font-weight: 700;
+}
+
+.track-artist {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+
+.play-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--accent);
+    border: none;
+    color: var(--bg-primary);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(184, 134, 11, 0.3);
+}
+
+.play-btn:hover {
+    background: var(--accent-dark);
+    transform: scale(1.05);
+}
+
+.play-btn .pause-icon {
+    display: none;
+}
+
+.play-btn.playing .play-icon {
+    display: none;
+}
+
+.play-btn.playing .pause-icon {
+    display: block;
+}
+
+.album-covers {
+    width: 100%;
+    max-width: 1200px;
+    margin-top: 2rem;
+}
+
+.collection-title {
+    font-family: 'Dancing Script', cursive;
+    font-size: 2.5rem;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 1.5rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.album-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .album-grid {
+        grid-template-columns: repeat(6, 1fr);
+        max-width: 800px;
+    }
+}
+
+.album-item {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.album-item:hover {
+    transform: scale(1.05);
+    border-color: var(--accent);
+}
+
+.album-item.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 15px rgba(184, 134, 11, 0.5);
+}
+
+.album-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* ===== 文章合集分类区 - Bento 布局 ===== */
+.collections-section {
+    padding: 4rem 2rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+.section-title {
+    font-family: 'Dancing Script', cursive;
+    font-size: 2rem;
+    color: var(--accent);
+    text-align: center;
+    margin-bottom: 2rem;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.bento-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: 200px;
+    gap: 1rem;
+    grid-auto-flow: dense;
+}
+
+@media (min-width: 768px) {
+    .bento-grid {
+        grid-template-columns: repeat(4, 1fr);
+        grid-auto-rows: 250px;
+    }
+}
+
+.bento-item {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    border: 1px solid var(--bass-wave);
+}
+
+.bento-item:hover {
+    transform: translateY(-5px);
+    border-color: var(--accent);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.bento-item.horizontal {
+    grid-column: span 2;
+}
+
+.bento-item.vertical {
+    grid-row: span 2;
+}
+
+.bento-item.square {
+    grid-column: span 1;
+    grid-row: span 1;
+}
+
+.bento-cover {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s ease;
+}
+
+.bento-item:hover .bento-cover {
+    transform: scale(1.1);
+}
+
+.bento-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+    padding: 1rem;
+    color: var(--text-primary);
+}
+
+.bento-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.bento-description {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* ===== 单篇文章时间流区 ===== */
+.timeline-section {
+    padding: 4rem 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 1;
+}
+
+.timeline-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.sort-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.sort-btn {
+    padding: 0.5rem 1rem;
+    background: var(--bg-secondary);
+    border: 1px solid var(--bass-wave);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-radius: 4px;
+}
+
+.sort-btn:hover {
+    background: var(--bg-tertiary);
+}
+
+.sort-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--bg-primary);
+}
+
+.timeline-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.timeline-item {
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1.5rem;
+    border-left: 3px solid var(--accent);
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.timeline-item:hover {
+    background: var(--bg-tertiary);
+    transform: translateX(5px);
+}
+
+.timeline-date {
+    font-size: 0.85rem;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.timeline-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.timeline-excerpt {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* ===== 页脚 ===== */
+.footer {
+    text-align: center;
+    padding: 2rem;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    position: relative;
+    z-index: 1;
+}
+
+/* ===== 文章详情页 ===== */
+.article-page {
+    min-height: 100vh;
+    background: var(--article-dark-bg);
+    color: var(--article-dark-text);
+}
+
+.article-page.light-theme {
+    background: var(--article-light-bg);
+    color: var(--article-light-text);
+}
+
+.article-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.article-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.back-btn {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 1.1rem;
+    transition: color 0.3s ease;
+}
+
+.back-btn:hover {
+    color: var(--accent-dark);
+}
+
+.theme-toggle {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg-secondary);
+    border: 1px solid var(--bass-wave);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-toggle:hover {
+    background: var(--bg-tertiary);
+}
+
+.article-page.light-theme .theme-toggle {
+    background: var(--bg-tertiary);
+    color: var(--article-light-text);
+}
+
+.theme-light,
+.theme-dark {
+    font-size: 1.2rem;
+}
+
+.article-page.light-theme .theme-dark {
+    display: none;
+}
+
+.article-page:not(.light-theme) .theme-light {
+    display: none;
+}
+
+.article-cover {
+    width: 100%;
+    max-height: 400px;
+    object-fit: cover;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+}
+
+.article-title {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    line-height: 1.3;
+}
+
+.article-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.article-date {
+    color: var(--accent);
+    font-size: 0.9rem;
+}
+
+.article-tags {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.article-tag {
+    background: var(--bg-tertiary);
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.article-page.light-theme .article-tag {
+    background: var(--bg-secondary);
+    color: var(--article-light-text);
+}
+
+.article-body {
+    font-size: 1.1rem;
+    line-height: 1.8;
+}
+
+.article-body h1,
+.article-body h2,
+.article-body h3 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: var(--accent);
+}
+
+.article-page.light-theme .article-body h1,
+.article-page.light-theme .article-body h2,
+.article-page.light-theme .article-body h3 {
+    color: var(--accent-dark);
+}
+
+.article-body p {
+    margin-bottom: 1.5rem;
+}
+
+.article-body img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 1.5rem 0;
+}
+
+.article-body blockquote {
+    border-left: 3px solid var(--accent);
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    font-style: italic;
+    color: var(--text-secondary);
+}
+
+.article-page.light-theme .article-body blockquote {
+    color: var(--article-light-text);
+}
+
+.article-body ul,
+.article-body ol {
+    margin-bottom: 1.5rem;
+    padding-left: 2rem;
+}
+
+.article-body li {
+    margin-bottom: 0.5rem;
+}
+
+.article-body code {
+    background: var(--bg-tertiary);
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+    font-family: monospace;
+}
+
+.article-page.light-theme .article-body code {
+    background: var(--bg-secondary);
+}
+
+.article-body pre {
+    background: var(--bg-tertiary);
+    padding: 1rem;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 1.5rem 0;
+}
+
+.article-page.light-theme .article-body pre {
+    background: var(--bg-secondary);
+}
+
+.article-body audio {
+    width: 100%;
+    margin: 1.5rem 0;
+    border-radius: 8px;
+}
+
+/* ===== 合集列表页 ===== */
+.collection-page {
+    min-height: 100vh;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    padding: 2rem;
+}
+
+.collection-list-container {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.collection-header {
+    margin-bottom: 2rem;
+}
+
+.collection-page-title {
+    font-family: 'Dancing Script', cursive;
+    font-size: 2.5rem;
+    color: var(--accent);
+    margin: 1rem 0;
+}
+
+.collection-description {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+.article-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.article-list-item {
+    display: flex;
+    gap: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.article-list-item:hover {
+    border-color: var(--accent);
+    transform: translateX(5px);
+}
+
+.article-list-thumb {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.article-list-info {
+    flex: 1;
+}
+
+.article-list-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.article-list-excerpt {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* ===== 响应式调整 ===== */
+@media (max-width: 480px) {
+    .vinyl-record {
+        width: 220px;
+        height: 220px;
+    }
+    
+    .vinyl-center {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .collection-title {
+        font-size: 2rem;
+    }
+    
+    .album-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .bento-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .bento-item.horizontal,
+    .bento-item.vertical {
+        grid-column: span 1;
+        grid-row: span 1;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+    }
+    
+    .article-title {
+        font-size: 1.5rem;
+    }
+    
+    .article-list-item {
+        flex-direction: column;
+    }
+    
+    .article-list-thumb {
+        width: 100%;
+        height: 150px;
+    }
+}

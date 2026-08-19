@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JoJoCollection - 低频里的乐队手札</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Noto+Serif+SC:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 首页黑胶唱片区 -->
+    <section id="vinyl-section" class="vinyl-section">
+        <div class="vinyl-container">
+            <div class="vinyl-wrapper">
+                <div class="vinyl-record" id="vinyl-record">
+                    <div class="vinyl-grooves"></div>
+                    <div class="vinyl-center">
+                        <img id="vinyl-cover" src="" alt="Album Cover" class="vinyl-cover">
+                    </div>
+                </div>
+            </div>
+            <div class="vinyl-info">
+                <h2 id="track-title" class="track-title">Loading...</h2>
+                <p id="track-artist" class="track-artist">Loading...</p>
+                <button id="play-btn" class="play-btn">
+                    <span class="play-icon">▶</span>
+                    <span class="pause-icon">⏸</span>
+                </button>
+            </div>
+        </div>
+        <div class="album-covers">
+            <h1 class="collection-title">JoJoCollection</h1>
+            <div class="album-grid" id="album-grid">
+                <!-- 专辑封面将通过 JS 动态生成 -->
+            </div>
+        </div>
+    </section>
+
+    <!-- 文章合集分类区 - Bento 布局 -->
+    <section id="collections" class="collections-section">
+        <h2 class="section-title">文章合集</h2>
+        <div class="bento-grid" id="bento-grid">
+            <!-- Bento 模块将通过 JS 动态生成 -->
+        </div>
+    </section>
+
+    <!-- 单篇文章时间流区 -->
+    <section id="timeline" class="timeline-section">
+        <div class="timeline-header">
+            <h2 class="section-title">文章时间流</h2>
+            <div class="sort-controls">
+                <button id="sort-asc" class="sort-btn active">正序 ↑</button>
+                <button id="sort-desc" class="sort-btn">倒序 ↓</button>
+            </div>
+        </div>
+        <div class="timeline-list" id="timeline-list">
+            <!-- 时间流文章将通过 JS 动态生成 -->
+        </div>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <p>Bass in the dark. Stories in the groove.</p>
+    </footer>
+
+    <!-- 隐藏的音频元素 -->
+    <audio id="audio-player" preload="auto"></audio>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
