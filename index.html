@@ -66,6 +66,20 @@
     <!-- 隐藏的音频元素 -->
     <audio id="audio-player" preload="auto"></audio>
 
+    <!-- 专辑列表模态框 -->
+    <div id="albums-modal" class="albums-modal">
+        <div class="albums-modal-content">
+            <button class="albums-modal-close">&times;</button>
+            <div class="albums-modal-header">
+                <h1 class="albums-modal-title">更多专辑</h1>
+                <p class="albums-modal-subtitle">探索更多音乐作品</p>
+            </div>
+            <div class="albums-modal-grid" id="albums-modal-grid">
+                <!-- 专辑卡片将通过 JS 动态生成 -->
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         // 全局数据存储
@@ -154,6 +168,18 @@
                 albumItem.appendChild(img);
                 albumItem.addEventListener('click', () => playTrack(track.id));
                 albumGrid.appendChild(albumItem);
+                
+                // 在第6张专辑右下角添加"更多曲目"按钮
+                if (index === tracks.length - 1) {
+                    const moreTracksBtn = document.createElement('div');
+                    moreTracksBtn.className = 'more-tracks-button';
+                    moreTracksBtn.textContent = '更多曲目';
+                    moreTracksBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        showAlbumsModal();
+                    });
+                    albumItem.appendChild(moreTracksBtn);
+                }
             });
             
             // 加载默认曲目
@@ -504,6 +530,80 @@
                 month: 'long',
                 day: 'numeric'
             });
+        }
+
+        // 显示专辑列表模态框
+        function showAlbumsModal() {
+            const modal = document.getElementById('albums-modal');
+            const albumsGrid = document.getElementById('albums-modal-grid');
+            
+            if (!config.albums) return;
+            
+            albumsGrid.innerHTML = '';
+            
+            config.albums.forEach(album => {
+                const albumCard = document.createElement('div');
+                albumCard.className = 'albums-modal-card';
+                
+                const cover = document.createElement('img');
+                cover.src = album.cover;
+                cover.alt = album.title;
+                cover.className = 'albums-modal-card-cover';
+                
+                const info = document.createElement('div');
+                info.className = 'albums-modal-card-info';
+                
+                const title = document.createElement('h3');
+                title.className = 'albums-modal-card-title';
+                title.textContent = album.title;
+                
+                const artist = document.createElement('p');
+                artist.className = 'albums-modal-card-artist';
+                artist.textContent = album.artist;
+                
+                const year = document.createElement('p');
+                year.className = 'albums-modal-card-year';
+                year.textContent = album.year;
+                
+                const description = document.createElement('p');
+                description.className = 'albums-modal-card-description';
+                description.textContent = album.description;
+                
+                const tracks = document.createElement('div');
+                tracks.className = 'albums-modal-card-tracks';
+                
+                album.tracks.forEach((track, index) => {
+                    const trackElement = document.createElement('div');
+                    trackElement.className = 'albums-modal-card-track';
+                    trackElement.textContent = `${index + 1}. ${track}`;
+                    tracks.appendChild(trackElement);
+                });
+                
+                info.appendChild(title);
+                info.appendChild(artist);
+                info.appendChild(year);
+                info.appendChild(description);
+                info.appendChild(tracks);
+                
+                albumCard.appendChild(cover);
+                albumCard.appendChild(info);
+                
+                albumsGrid.appendChild(albumCard);
+            });
+            
+            modal.classList.add('active');
+            
+            // 模态框关闭事件
+            const closeBtn = modal.querySelector('.albums-modal-close');
+            closeBtn.onclick = () => {
+                modal.classList.remove('active');
+            };
+            
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    modal.classList.remove('active');
+                }
+            };
         }
 
         // 处理 hash 滚动

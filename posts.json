@@ -51,7 +51,87 @@
           "audio": "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3"
         }
       ]
-    }
+    },
+    "albums": [
+      {
+        "id": "album-01",
+        "title": "Midnight Sessions",
+        "artist": "Night Bass Ensemble",
+        "cover": "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80",
+        "year": "2023",
+        "description": "深夜录音室即兴演奏集",
+        "tracks": [
+          "Low End Theory",
+          "Four Strings",
+          "Rehearsal Tape"
+        ]
+      },
+      {
+        "id": "album-02",
+        "title": "Stage Dreams",
+        "artist": "Red Amp",
+        "cover": "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=800&q=80",
+        "year": "2024",
+        "description": "现场演出录音精选",
+        "tracks": [
+          "Stage Dust",
+          "After Midnight",
+          "Crowd Surf"
+        ]
+      },
+      {
+        "id": "album-03",
+        "title": "Vintage Tales",
+        "artist": "Vintage Line",
+        "cover": "https://images.unsplash.com/photo-1460036521480-bc74be81dd84?auto=format&fit=crop&w=800&q=80",
+        "year": "2022",
+        "description": "复古设备录制作品",
+        "tracks": [
+          "Wood & Wire",
+          "Tube Amp Blues",
+          "Analog Dreams"
+        ]
+      },
+      {
+        "id": "album-04",
+        "title": "Subharmonic",
+        "artist": "Subharmonic",
+        "cover": "https://images.unsplash.com/photo-1459749411177-04de3040c98a?auto=format&fit=crop&w=800&q=80",
+        "year": "2024",
+        "description": "低频实验音乐",
+        "tracks": [
+          "After Midnight",
+          "Deep Bass",
+          "Frequency Test"
+        ]
+      },
+      {
+        "id": "album-05",
+        "title": "Bass Lines",
+        "artist": "Various Artists",
+        "cover": "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=800&q=80",
+        "year": "2023",
+        "description": "经典贝斯线条合集",
+        "tracks": [
+          "Funk Bass",
+          "Jazz Walking",
+          "Rock Groove"
+        ]
+      },
+      {
+        "id": "album-06",
+        "title": "Live Sessions",
+        "artist": "The Band",
+        "cover": "https://images.unsplash.com/photo-1511379938547-c1f69419868d?auto=format&fit=crop&w=800&q=80",
+        "year": "2024",
+        "description": "现场录音精选",
+        "tracks": [
+          "Opening Act",
+          "Main Set",
+          "Encore"
+        ]
+      }
+    ]
   },
   "collections": [
     {
