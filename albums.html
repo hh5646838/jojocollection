@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>全部专辑 — JoJoCollection</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Liu+Jian+Mao+Cao&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="nav">
+        <a href="index.html" class="nav__brand">JoJoCollection</a>
+        <nav class="nav__links">
+            <a href="index.html" class="nav__link">首页</a>
+            <a href="albums.html" class="nav__link nav__link--accent">专辑</a>
+            <a href="index.html#timeline" class="nav__link">文章</a>
+        </nav>
+    </header>
+
+    <div class="page">
+        <div class="page__head">
+            <a class="page__back" href="index.html">← 返回首页</a>
+            <h1 class="page__title">全部专辑</h1>
+            <p class="page__sub">不仅是封面，更是声音本身。点击任意单曲即可试听。</p>
+        </div>
+
+        <div class="albums-page">
+            <!-- 嵌入式播放条 -->
+            <div class="mini-player" id="mini-player">
+                <button class="mini-player__btn" id="mini-btn" aria-label="播放/暂停">
+                    <svg class="ic-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg class="ic-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                </button>
+                <img class="mini-player__cover" id="mini-cover" src="" alt="" style="display:none">
+                <div class="mini-player__meta">
+                    <div class="mini-player__title" id="mini-title">尚未选择曲目</div>
+                    <div class="mini-player__artist" id="mini-artist">从下方专辑中挑一首吧</div>
+                </div>
+                <div class="mini-player__bar"><div class="mini-player__fill" id="mini-fill"></div></div>
+            </div>
+
+            <div class="album-cards" id="album-cards"></div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p><b>JoJoCollection</b> · Bass in the dark. Stories in the groove.</p>
+    </footer>
+
+    <audio id="audio-player" preload="auto"></audio>
+
+    <script>
+        let config = {}, vinylTracks = [];
+        let currentId = null, isPlaying = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetch('posts.json').then(r => r.json()).then(data => {
+                config = data.config || {};
+                vinylTracks = config.vinyl ? config.vinyl.tracks : [];
+                renderAlbums();
+                bindMiniPlayer();
+            });
+        });
+
+        // 通过标题在 vinyl 曲目里找到真实 audio 地址
+        function findTrackByTitle(title) {
+            return vinylTracks.find(t => t.title === title) || null;
+        }
+
+        function renderAlbums() {
+            const wrap = document.getElementById('album-cards');
+            if (!config.albums) return;
+            wrap.innerHTML = '';
+            config.albums.forEach(album => {
+                const card = document.createElement('div');
+                card.className = 'album-card';
+                const tracksHtml = album.tracks.map((name, i) => {
+                    const t = findTrackByTitle(name);
+                    const id = t ? t.id : '';
+                    return `<div class="track" data-id="${id}" data-title="${name}">
+                        <span class="track__num">${i + 1}</span>
+                        <span class="track__name">${name}</span>
+                        <svg class="track__play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </div>`;
+                }).join('');
+                card.innerHTML = `
+                    <img class="album-card__art" src="${album.cover}" alt="${album.title}">
+                    <div class="album-card__body">
+                        <h2 class="album-card__title">${album.title}</h2>
+                        <p class="album-card__artist">${album.artist}</p>
+                        <p class="album-card__year">${album.year || ''}</p>
+                        <p class="album-card__desc">${album.description}</p>
+                    </div>
+                    <div class="tracklist">${tracksHtml}</div>`;
+                // 绑定单曲点击
+                card.querySelectorAll('.track').forEach(tr => {
+                    tr.addEventListener('click', () => playTrack(tr.dataset.id, tr.dataset.title, album));
+                });
+                wrap.appendChild(card);
+            });
+        }
+
+        function playTrack(id, title, album) {
+            const track = vinylTracks.find(t => t.id === id);
+            if (!track) return; // 找不到真实音源则忽略
+            currentId = id;
+            const audio = document.getElementById('audio-player');
+            audio.src = track.audio;
+
+            const cover = document.getElementById('mini-cover');
+            cover.src = album.cover; cover.style.display = 'block';
+            document.getElementById('mini-title').textContent = title;
+            document.getElementById('mini-artist').textContent = album.artist;
+
+            document.querySelectorAll('.track').forEach(tr =>
+                tr.classList.toggle('is-current', tr.dataset.id === id));
+
+            audio.play(); setPlaying(true);
+        }
+
+        function bindMiniPlayer() {
+            document.getElementById('mini-btn').addEventListener('click', () => {
+                if (!currentId) return;
+                const audio = document.getElementById('audio-player');
+                if (isPlaying) { audio.pause(); setPlaying(false); }
+                else { audio.play(); setPlaying(true); }
+            });
+            const audio = document.getElementById('audio-player');
+            audio.addEventListener('ended', () => setPlaying(false));
+            audio.addEventListener('timeupdate', () => {
+                if (audio.duration) {
+                    document.getElementById('mini-fill').style.width =
+                        (audio.currentTime / audio.duration * 100) + '%';
+                }
+            });
+        }
+
+        function setPlaying(state) {
+            isPlaying = state;
+            document.getElementById('mini-player').classList.toggle('is-playing', state);
+        }
+    </script>
+</body>
+</html>

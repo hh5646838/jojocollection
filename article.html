@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>文章 — JoJoCollection</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Liu+Jian+Mao+Cao&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="nav">
+        <a href="index.html" class="nav__brand">JoJoCollection</a>
+        <nav class="nav__links">
+            <a href="index.html" class="nav__link">首页</a>
+            <a href="albums.html" class="nav__link">专辑</a>
+            <a href="index.html#timeline" class="nav__link">文章</a>
+        </nav>
+    </header>
+
+    <article class="page">
+        <div class="article-page" id="article-root">
+            <a class="page__back" href="index.html#timeline">← 返回文章列表</a>
+            <div id="article-loading" style="color:var(--text-dim);padding:60px 0">正在载入文章…</div>
+        </div>
+    </article>
+
+    <footer class="footer">
+        <p><b>JoJoCollection</b> · Bass in the dark. Stories in the groove.</p>
+    </footer>
+
+    <audio id="article-audio" preload="auto"></audio>
+
+    <!-- marked -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        const STYLES = [
+            { id: 'md-classic',   name: '经典',   desc: '衬线长文 · 舒适阅读',   swatch: 'linear-gradient(135deg,#e2563f,#f0a868)' },
+            { id: 'md-noir',      name: '暗夜',   desc: '霓虹青 · 高对比氛围',   swatch: 'linear-gradient(135deg,#5eead4,#0a0b0e)' },
+            { id: 'md-magazine',  name: '杂志',   desc: '首字下沉 · 编辑感排版', swatch: 'linear-gradient(135deg,#fff,#e2563f)' },
+            { id: 'md-minimal',   name: '极简',   desc: '无衬线 · 大量留白',     swatch: 'linear-gradient(135deg,#ecebe6,#646b78)' },
+        ];
+        const LS_KEY = 'jojo-md-style';
+        let currentAudio = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const id = new URLSearchParams(location.search).get('id');
+            fetch('posts.json').then(r => r.json()).then(data => {
+                const post = (data.posts || []).find(p => p.id === id);
+                if (!post) { document.getElementById('article-root').innerHTML = '<p style="color:var(--text-dim);padding:60px 0">未找到该文章。</p>'; return; }
+                renderArticle(post);
+            });
+        });
+
+        function renderArticle(post) {
+            const root = document.getElementById('article-root');
+            const saved = localStorage.getItem(LS_KEY) || 'md-classic';
+
+            root.innerHTML = `
+                <a class="page__back" href="index.html#timeline">← 返回文章列表</a>
+                <img class="article-cover" src="${post.cover}" alt="">
+                <h1 class="article-title">${post.title}</h1>
+                <div class="article-meta">
+                    <span>${formatDate(post.date)}</span>
+                    <div class="article-tags">${(post.tags || []).map(t => `<span class="tag">#${t}</span>`).join('')}</div>
+                </div>
+
+                <div class="style-switch" id="style-switch">
+                    <button class="style-switch__btn" id="style-btn">
+                        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
+                        <span id="style-label">排版：经典</span>
+                    </button>
+                    <div class="style-switch__menu" id="style-menu">
+                        ${STYLES.map(s => `
+                            <button class="style-switch__opt ${s.id === saved ? 'is-active' : ''}" data-id="${s.id}">
+                                <span class="style-switch__swatch" style="background:${s.swatch}"></span>
+                                <span>${s.name}<small>${s.desc}</small></span>
+                            </button>`).join('')}
+                    </div>
+                </div>
+
+                <div class="article-body ${saved}" id="article-body">${marked.parse(post.content || '')}</div>
+            `;
+
+            // 初始化当前排版名称
+            document.getElementById('style-label').textContent = '排版：' + STYLES.find(s => s.id === saved).name;
+
+            // 下拉交互
+            const sw = document.getElementById('style-switch');
+            document.getElementById('style-btn').addEventListener('click', e => { e.stopPropagation(); sw.classList.toggle('is-open'); });
+            document.getElementById('style-menu').addEventListener('click', e => {
+                const opt = e.target.closest('.style-switch__opt'); if (!opt) return;
+                const id = opt.dataset.id;
+                document.getElementById('article-body').className = 'article-body ' + id;
+                document.getElementById('style-label').textContent = '排版：' + STYLES.find(s => s.id === id).name;
+                document.querySelectorAll('.style-switch__opt').forEach(o => o.classList.toggle('is-active', o.dataset.id === id));
+                localStorage.setItem(LS_KEY, id);
+                sw.classList.remove('is-open');
+            });
+            document.addEventListener('click', () => sw.classList.remove('is-open'));
+
+            // 自定义音频播放器
+            upgradeAudioPlayers(document.getElementById('article-body'));
+        }
+
+        /* 将文章内的 <audio> 替换为高级自定义控件 */
+        function upgradeAudioPlayers(scope) {
+            scope.querySelectorAll('audio').forEach(audio => {
+                const src = audio.getAttribute('src');
+                if (!src) return;
+                const title = audio.dataset.title || audio.getAttribute('title') || '音频片段';
+                const player = document.createElement('div');
+                player.className = 'audio-player';
+                player.innerHTML = `
+                    <button class="audio-player__btn" aria-label="播放">
+                        <svg class="ic-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        <svg class="ic-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                    </button>
+                    <div class="audio-player__main">
+                        <div class="audio-player__title">${title}</div>
+                        <div class="audio-player__bar"><div class="audio-player__fill"></div></div>
+                        <div class="audio-player__time">0:00 / 0:00</div>
+                    </div>`;
+                audio.parentNode.replaceChild(player, audio);
+
+                const audioEl = document.getElementById('article-audio');
+                const btn = player.querySelector('.audio-player__btn');
+                const fill = player.querySelector('.audio-player__fill');
+                const time = player.querySelector('.audio-player__time');
+                let bound = false;
+
+                btn.addEventListener('click', () => {
+                    if (currentAudio && currentAudio !== player) currentAudio.classList.remove('is-playing');
+                    audioEl.src = src;
+                    if (player.classList.contains('is-playing')) {
+                        audioEl.pause(); player.classList.remove('is-playing');
+                    } else {
+                        audioEl.play(); player.classList.add('is-playing'); currentAudio = player;
+                    }
+                });
+
+                if (!bound) {
+                    bound = true;
+                    audioEl.addEventListener('timeupdate', () => {
+                        if (!currentAudio) return;
+                        const f = currentAudio.querySelector('.audio-player__fill');
+                        const t = currentAudio.querySelector('.audio-player__time');
+                        const pct = audioEl.duration ? (audioEl.currentTime / audioEl.duration * 100) : 0;
+                        if (f) f.style.width = pct + '%';
+                        if (t) t.textContent = fmt(audioEl.currentTime) + ' / ' + fmt(audioEl.duration);
+                    });
+                    audioEl.addEventListener('ended', () => { if (currentAudio) currentAudio.classList.remove('is-playing'); });
+                }
+
+                // 进度条点击跳转
+                player.querySelector('.audio-player__bar').addEventListener('click', e => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const ratio = (e.clientX - rect.left) / rect.width;
+                    if (audioEl.duration) audioEl.currentTime = ratio * audioEl.duration;
+                });
+            });
+        }
+
+        function fmt(s) {
+            if (!s || isNaN(s)) return '0:00';
+            const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+            return m + ':' + (sec < 10 ? '0' : '') + sec;
+        }
+        function formatDate(s) { return new Date(s).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }); }
+    </script>
+</body>
+</html>
