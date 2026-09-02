@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="referrer" content="no-referrer">
+    <title>JoJoCollection — 低频里的乐队手札</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Liu+Jian+Mao+Cao&family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Noto+Serif+SC:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- 导航 -->
+    <header class="nav">
+        <a href="#/" class="nav__brand">JoJoCollection</a>
+        <nav class="nav__links">
+            <a href="#/" class="nav__link" data-nav="home">首页</a>
+            <a href="#/albums" class="nav__link" data-nav="albums">专辑</a>
+            <a href="#/" class="nav__link" data-nav="articles" data-scroll="timeline">文章</a>
+        </nav>
+    </header>
+
+    <main id="view"><!-- 视图由路由注入 --></main>
+
+    <footer class="footer">
+        <p><b>JoJoCollection</b> · Bass in the dark. Stories in the groove.</p>
+    </footer>
+
+    <!-- 全局唯一播放器（永不被销毁） -->
+    <audio id="global-player" preload="auto"></audio>
+
+    <!-- 常驻底部播放条 -->
+    <div class="global-bar" id="global-bar">
+        <button class="global-bar__btn" id="g-btn" aria-label="播放/暂停">
+            <svg class="ic-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg class="ic-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+        </button>
+        <img class="global-bar__cover" id="g-cover" src="" alt="" style="display:none">
+        <div class="global-bar__meta">
+            <div class="global-bar__title" id="g-title">尚未选择曲目</div>
+            <div class="global-bar__artist" id="g-artist">从任意页面点一首歌开始</div>
+        </div>
+        <div class="global-bar__bar"><div class="global-bar__fill" id="g-fill"></div></div>
+    </div>
+
+    <!-- marked（文章排版解析） -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+    /* ============== 全局状态 ============== */
+    const App = {
+        config: {},
+        posts: [],
+        collections: [],
+        sortAscending: true,
+        pendingScroll: null,
+        currentSnippet: null,   // 文章内音频片段自定义控件
+    };
+    const audio = document.getElementById('global-player');
+    let currentTrack = null;
+    let isPlaying = false;
+
+    /* ============== 数据加载 ============== */
+    document.addEventListener('DOMContentLoaded', () => {
+        loadData().then(() => {
+            bindGlobalPlayer();
+            window.addEventListener('hashchange', router);
+            router();
+        });
+    });
+
+    async function loadData() {
+        const res = await fetch('posts.json');
+        const data = await res.json();
+        App.config = data.config || {};
+        App.posts = data.posts || [];
+        App.collections = data.collections || [];
+    }
+
+    /* ============== 路由 ============== */
+    function router() {
+        const hash = location.hash.replace(/^#/, '');
+        const [path, query] = hash.split('?');
+        const parts = path.split('/').filter(Boolean);
+        const id = new URLSearchParams(query || '').get('id');
+
+        let view = 'home';
+        if (parts[0] === 'albums') view = 'albums';
+        else if (parts[0] === 'article') view = 'article';
+
+        if (view === 'home') renderHome();
+        else if (view === 'albums') renderAlbums();
+        else if (view === 'article') {
+            if (id) renderArticle(id);
+            else renderHome();
+        }
+    }
+
+    /* ============== 全局播放器 ============== */
+    function bindGlobalPlayer() {
+        audio.addEventListener('ended', () => setPlaying(false));
+        audio.addEventListener('timeupdate', () => {
+            const pct = audio.duration ? (audio.currentTime / audio.duration * 100) : 0;
+            const fill = document.getElementById('g-fill');
+            if (fill) fill.style.width = pct + '%';
+            if (App.currentSnippet) {
+                const f = App.currentSnippet.querySelector('.audio-player__fill');
+                const t = App.currentSnippet.querySelector('.audio-player__time');
+                if (f) f.style.width = pct + '%';
+                if (t) t.textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration);
+            }
+        });
+        document.getElementById('g-btn').addEventListener('click', togglePlay);
+    }
+
+    function selectTrack(id, autoplay) {
+        const track = (App.config.vinyl ? App.config.vinyl.tracks : []).find(t => t.id === id);
+        if (!track) return;
+        currentTrack = track;
+        audio.src = track.audio;
+        App.currentSnippet = null;
+        syncUI();
+        if (autoplay) { audio.play(); setPlaying(true); }
+    }
+
+    function togglePlay() {
+        if (!currentTrack) {
+            // 没有选过曲目则播放默认
+            const def = App.config.vinyl && App.config.vinyl.defaultTrackId;
+            if (def) selectTrack(def, true);
+            return;
+        }
+        if (isPlaying) { audio.pause(); setPlaying(false); }
+        else { audio.play(); setPlaying(true); }
+    }
+
+    function setPlaying(state) {
+        isPlaying = state;
+        document.getElementById('g-btn').classList.toggle('is-playing', state);
+        const pm = document.getElementById('play-mini');
+        if (pm) pm.classList.toggle('is-playing', state);
+        const gm = document.getElementById('gear-main');
+        if (gm) gm.classList.toggle('is-spinning', state);
+        const gmi = document.getElementById('gear-mini');
+        if (gmi) gmi.classList.toggle('is-spinning', state);
+        const bar = document.getElementById('global-bar');
+        if (bar) bar.classList.toggle('is-playing', state);
+    }
+
+    // 把当前曲目同步到所有相关 UI（存在才更新）
+    function syncUI() {
+        if (!currentTrack) return;
+        const cover = currentTrack.cover || '';
+        const title = currentTrack.title || '';
+        const artist = currentTrack.artist || '';
+
+        const gCover = document.getElementById('g-cover');
+        if (gCover) { gCover.src = cover; gCover.style.display = 'block'; }
+        setText('g-title', title);
+        setText('g-artist', artist);
+
+        const vc = document.getElementById('vinyl-cover');
+        if (vc) vc.src = cover;
+        setText('stage-title', title);
+        setText('stage-artist', artist);
+        setText('np-title', title);
+        setText('np-artist', artist);
+
+        document.querySelectorAll('.album-thumb').forEach(el =>
+            el.classList.toggle('is-active', el.dataset.id === currentTrack.id));
+        document.querySelectorAll('.track').forEach(tr =>
+            tr.classList.toggle('is-current', tr.dataset.id === currentTrack.id));
+    }
+
+    function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
+
+    /* ============== 视图：首页 ============== */
+    function renderHome() {
+        const view = document.getElementById('view');
+        view.innerHTML = `
+            <section class="hero">
+                <div class="hero__callout">
+                    <div class="hero__text">
+                        <p class="hero__eyebrow">Now Spinning</p>
+                        <h1 class="hero__headline">Put on your headphones and get ready to listen to some rock!!!</h1>
+                        <p class="hero__now">正在播放：<b id="np-title">—</b> · <b id="np-artist">—</b></p>
+                    </div>
+                </div>
+                <div class="stage">
+                    <div class="gear-wrap" id="vinyl">
+                        <svg class="gear gear--main" id="gear-main" viewBox="0 0 300 300" aria-hidden="true">
+                            <circle class="gear__disk" cx="150" cy="150" r="146"/>
+                            <path class="gear__teeth" d="M 271.76 157.66 L 299.07 166.72 L 296.72 181.19 L 267.95 181.16 L 261.80 198.84 L 284.36 216.70 L 277.21 229.49 L 250.18 219.63 L 238.35 234.13 L 253.44 258.63 L 242.35 268.20 L 220.32 249.69 L 204.25 259.28 L 210.05 287.45 L 196.35 292.66 L 181.99 267.73 L 163.60 271.24 L 159.42 299.70 L 144.77 299.91 L 139.79 271.57 L 121.31 268.58 L 107.65 293.90 L 93.81 289.08 L 98.83 260.75 L 82.49 251.62 L 60.99 270.73 L 49.63 261.47 L 64.03 236.57 L 51.80 222.40 L 25.06 233.01 L 17.56 220.42 L 39.61 201.95 L 32.96 184.45 L 4.21 185.27 L 1.46 170.88 L 28.50 161.06 L 28.24 142.34 L 0.93 133.28 L 3.28 118.81 L 32.05 118.84 L 38.20 101.16 L 15.64 83.30 L 22.79 70.51 L 49.82 80.37 L 61.65 65.87 L 46.56 41.37 L 57.65 31.80 L 79.68 50.31 L 95.75 40.72 L 89.95 12.55 L 103.65 7.34 L 118.01 32.27 L 136.40 28.76 L 140.58 0.30 L 155.23 0.09 L 160.21 28.43 L 178.69 31.42 L 192.35 6.10 L 206.19 10.92 L 201.17 39.25 L 217.51 48.38 L 239.01 29.27 L 250.37 38.53 L 235.97 63.43 L 248.20 77.60 L 274.94 66.99 L 282.44 79.58 L 260.39 98.05 L 267.04 115.55 L 295.79 114.73 L 298.54 129.12 L 271.50 138.94 Z"/>
+                            <circle class="gear__rim" cx="150" cy="150" r="104"/>
+                        </svg>
+                        <img class="gear__cover" id="vinyl-cover" src="" alt="Album Cover">
+                        <div class="gear__hole" aria-hidden="true"></div>
+                        <svg class="gear gear--mini" id="gear-mini" viewBox="0 0 110 110" aria-hidden="true">
+                            <circle class="gear__disk" cx="55" cy="55" r="53"/>
+                            <path class="gear__teeth" d="M 94.60 60.64 L 108.27 68.68 L 104.01 79.97 L 88.43 76.96 L 79.02 86.99 L 83.00 102.34 L 72.00 107.31 L 63.11 94.17 L 49.36 94.60 L 41.32 108.27 L 30.03 104.01 L 33.04 88.43 L 23.01 79.02 L 7.66 83.00 L 2.69 72.00 L 15.83 63.11 L 15.40 49.36 L 1.73 41.32 L 5.99 30.03 L 21.57 33.04 L 30.98 23.01 L 27.00 7.66 L 38.00 2.69 L 46.89 15.83 L 60.64 15.40 L 68.68 1.73 L 79.97 5.99 L 76.96 21.57 L 86.99 30.98 L 102.34 27.00 L 107.31 38.00 L 94.17 46.89 Z"/>
+                            <circle class="gear__rim" cx="55" cy="55" r="30"/>
+                        </svg>
+                    </div>
+                    <div class="stage__controls">
+                        <button class="play-mini" id="play-mini" aria-label="播放/暂停">
+                            <svg class="icon-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            <svg class="icon-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                        </button>
+                        <div class="stage__info">
+                            <p class="stage__label">Track</p>
+                            <h2 class="stage__title" id="stage-title">—</h2>
+                            <p class="stage__artist" id="stage-artist">—</p>
+                            <p class="stage__meta">点击齿轮或下方按键开始 / 暂停</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="album-strip">
+                    <div class="section-head">
+                        <h2 class="section-title">The Vinyl Wall</h2>
+                        <span class="section-sub">点选任意唱片切换曲目</span>
+                    </div>
+                    <div class="album-grid" id="album-grid"></div>
+                    <a class="more-link" href="#/albums">浏览全部专辑 →</a>
+                </div>
+            </section>
+
+            <section class="collections" id="collections">
+                <div class="section-head">
+                    <h2 class="section-title">文章合集</h2>
+                    <span class="section-sub">按乐队 / 风格归类的深度长文</span>
+                </div>
+                <div class="bento" id="bento-grid"></div>
+            </section>
+
+            <section class="timeline" id="timeline">
+                <div class="section-head timeline__bar">
+                    <h2 class="section-title">文章时间流</h2>
+                    <div class="sort">
+                        <button id="sort-asc" class="is-active">正序 ↑</button>
+                        <button id="sort-desc">倒序 ↓</button>
+                    </div>
+                </div>
+                <div class="timeline__list" id="timeline-list"></div>
+            </section>
+        `;
+
+        initPlayerUI();
+        initCollections();
+        initTimeline();
+
+        syncUI();
+        if (App.pendingScroll) {
+            const el = document.getElementById(App.pendingScroll);
+            if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 80);
+            App.pendingScroll = null;
+        }
+    }
+
+    function initPlayerUI() {
+        const grid = document.getElementById('album-grid');
+        const tracks = (App.config.vinyl ? App.config.vinyl.tracks : []).slice(0, 8);
+        const defaultId = App.config.vinyl && App.config.vinyl.defaultTrackId;
+        grid.innerHTML = '';
+        tracks.forEach(track => {
+            const el = document.createElement('div');
+            el.className = 'album-thumb';
+            el.dataset.id = track.id;
+            el.innerHTML = `<img src="${track.cover}" alt="${track.title}">`;
+            el.addEventListener('click', () => selectTrack(track.id, true));
+            grid.appendChild(el);
+        });
+
+        document.getElementById('vinyl').addEventListener('click', togglePlay);
+        document.getElementById('play-mini').addEventListener('click', togglePlay);
+
+        if (defaultId && !currentTrack) selectTrack(defaultId, false);
+    }
+
+    /* ============== 合集 Bento ============== */
+    function initCollections() {
+        const grid = document.getElementById('bento-grid');
+        grid.innerHTML = '';
+        App.collections.forEach(c => {
+            const item = document.createElement('div');
+            item.className = 'bento__item' + (c.size === 'horizontal' ? ' is-wide' : c.size === 'vertical' ? ' is-tall' : '');
+            item.innerHTML = `
+                <img class="bento__cover" src="${c.cover}" alt="${c.title}">
+                <div class="bento__overlay">
+                    <h3 class="bento__title">${c.title}</h3>
+                    <p class="bento__desc">${c.description}</p>
+                </div>`;
+            item.addEventListener('click', () => filterTimeline(c.id, c.title));
+            grid.appendChild(item);
+        });
+    }
+
+    function filterTimeline(collectionId, title) {
+        const head = document.querySelector('.timeline .section-title');
+        const posts = App.posts.filter(p => p.collectionId === collectionId);
+        head.textContent = title;
+        document.querySelector('.sort').style.display = 'none';
+        renderTimeline(posts);
+        document.getElementById('timeline').scrollIntoView({ behavior: 'smooth' });
+
+        if (!document.getElementById('back-btn')) {
+            const back = document.createElement('button');
+            back.id = 'back-btn'; back.className = 'btn btn--ghost';
+            back.style.marginLeft = 'auto';
+            back.textContent = '← 返回全部文章';
+            back.onclick = () => initTimeline();
+            document.querySelector('.timeline__bar').appendChild(back);
+        }
+    }
+
+    /* ============== 时间流 ============== */
+    function initTimeline() {
+        document.querySelector('.timeline .section-title').textContent = '文章时间流';
+        document.querySelector('.sort').style.display = '';
+        const back = document.getElementById('back-btn');
+        if (back) back.remove();
+        renderTimeline(App.posts);
+
+        document.getElementById('sort-asc').onclick = () => { App.sortAscending = true; updateSort(); renderTimeline(App.posts); };
+        document.getElementById('sort-desc').onclick = () => { App.sortAscending = false; updateSort(); renderTimeline(App.posts); };
+    }
+
+    function updateSort() {
+        document.getElementById('sort-asc').classList.toggle('is-active', App.sortAscending);
+        document.getElementById('sort-desc').classList.toggle('is-active', !App.sortAscending);
+    }
+
+    function renderTimeline(posts) {
+        const list = document.getElementById('timeline-list');
+        list.innerHTML = '';
+        if (!posts.length) { list.innerHTML = '<p style="color:var(--text-dim)">该合集暂无文章</p>'; return; }
+        const sorted = [...posts].sort((a, b) => {
+            const da = new Date(a.date), db = new Date(b.date);
+            return App.sortAscending ? da - db : db - da;
+        });
+        sorted.forEach(post => {
+            const card = document.createElement('div');
+            card.className = 'tl-card';
+            card.innerHTML = `
+                <img class="tl-card__cover" src="${post.cover}" alt="">
+                <div>
+                    <div class="tl-card__date">${formatDate(post.date)}</div>
+                    <h3 class="tl-card__title">${post.title}</h3>
+                    <p class="tl-card__excerpt">${stripMd(post.excerpt)}</p>
+                </div>`;
+            card.addEventListener('click', () => { location.hash = '#/article?id=' + encodeURIComponent(post.id); });
+            list.appendChild(card);
+        });
+    }
+
+    /* ============== 视图：全部专辑 ============== */
+    function renderAlbums() {
+        const view = document.getElementById('view');
+        view.innerHTML = `
+            <div class="page">
+                <div class="page__head">
+                    <a class="page__back" href="#/">← 返回首页</a>
+                    <h1 class="page__title">全部专辑</h1>
+                    <p class="page__sub">不仅是封面，更是声音本身。点击任意单曲即可试听。</p>
+                </div>
+                <div class="albums-page">
+                    <div class="album-cards" id="album-cards"></div>
+                </div>
+            </div>
+        `;
+
+        const wrap = document.getElementById('album-cards');
+        const vinylTracks = App.config.vinyl ? App.config.vinyl.tracks : [];
+        wrap.innerHTML = '';
+        (App.config.albums || []).forEach(album => {
+            const card = document.createElement('div');
+            card.className = 'album-card';
+            const tracksHtml = album.tracks.map((name, i) => {
+                const t = vinylTracks.find(x => x.title === name);
+                const id = t ? t.id : '';
+                return `<div class="track" data-id="${id}" data-title="${name}">
+                    <span class="track__num">${i + 1}</span>
+                    <span class="track__name">${name}</span>
+                    <svg class="track__play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </div>`;
+            }).join('');
+            card.innerHTML = `
+                <div class="album-card__cover">
+                    <img class="album-card__art" src="${album.cover}" alt="${album.title}">
+                </div>
+                <div class="album-card__body">
+                    <h2 class="album-card__title">${album.title}</h2>
+                    <p class="album-card__artist">${album.artist}</p>
+                    <p class="album-card__year">${album.year || ''}</p>
+                    <p class="album-card__desc">${album.description}</p>
+                </div>
+                <div class="tracklist">${tracksHtml}</div>`;
+            card.querySelectorAll('.track').forEach(tr => {
+                tr.addEventListener('click', () => {
+                    const tid = tr.dataset.id;
+                    if (!tid) return;
+                    selectTrack(tid, true);
+                });
+            });
+            wrap.appendChild(card);
+        });
+
+        syncUI();
+    }
+
+    /* ============== 视图：文章详情 ============== */
+    const STYLES = [
+        { id: 'md-classic',   name: '经典',   desc: '衬线长文 · 舒适阅读',   swatch: 'linear-gradient(135deg,#e2563f,#f0a868)' },
+        { id: 'md-noir',      name: '暗夜',   desc: '霓虹青 · 高对比氛围',   swatch: 'linear-gradient(135deg,#5eead4,#0a0b0e)' },
+        { id: 'md-magazine',  name: '杂志',   desc: '首字下沉 · 编辑感排版', swatch: 'linear-gradient(135deg,#fff,#e2563f)' },
+        { id: 'md-minimal',   name: '极简',   desc: '无衬线 · 大量留白',     swatch: 'linear-gradient(135deg,#ecebe6,#646b78)' },
+    ];
+    const LS_KEY = 'jojo-md-style';
+
+    function renderArticle(id) {
+        const post = App.posts.find(p => p.id === id);
+        const root = document.getElementById('view');
+        if (!post) {
+            root.innerHTML = '<div class="page"><div class="page__head"><a class="page__back" href="#/">← 返回首页</a><p style="color:var(--text-dim);padding:60px 0">未找到该文章。</p></div></div>';
+            return;
+        }
+        const saved = localStorage.getItem(LS_KEY) || 'md-classic';
+
+        const sibs = App.posts.filter(p => p.collectionId === post.collectionId)
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+        const idx = sibs.findIndex(p => p.id === post.id);
+        const prevPost = idx > 0 ? sibs[idx - 1] : null;
+        const nextPost = (idx > -1 && idx < sibs.length - 1) ? sibs[idx + 1] : null;
+
+        const navHtml = (prevPost || nextPost) ? `
+            <nav class="post-nav">
+                ${prevPost ? `<a class="post-nav__btn post-nav__prev" href="#/article?id=${encodeURIComponent(prevPost.id)}">
+                    <span class="post-nav__dir">← 上一篇</span>
+                    <span class="post-nav__title">${prevPost.title}</span>
+                </a>` : `<span class="post-nav__btn post-nav__placeholder"></span>`}
+                ${nextPost ? `<a class="post-nav__btn post-nav__next" href="#/article?id=${encodeURIComponent(nextPost.id)}">
+                    <span class="post-nav__dir">下一篇 →</span>
+                    <span class="post-nav__title">${nextPost.title}</span>
+                </a>` : `<span class="post-nav__btn post-nav__placeholder"></span>`}
+            </nav>` : '';
+
+        root.innerHTML = `
+            <article class="page">
+                <div class="article-page" id="article-root">
+                    <a class="page__back" href="#/" data-scroll="timeline">← 返回文章列表</a>
+                    <h1 class="article-title">${post.title}</h1>
+                    <div class="article-meta">
+                        <span>${formatDate(post.date)}</span>
+                        <div class="article-tags">${(post.tags || []).map(t => `<span class="tag">#${t}</span>`).join('')}</div>
+                    </div>
+                    <div class="style-switch" id="style-switch">
+                        <button class="style-switch__btn" id="style-btn">
+                            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h14"/></svg>
+                            <span id="style-label">排版：${STYLES.find(s => s.id === saved).name}</span>
+                        </button>
+                        <div class="style-switch__menu" id="style-menu">
+                            ${STYLES.map(s => `
+                                <button class="style-switch__opt ${s.id === saved ? 'is-active' : ''}" data-id="${s.id}">
+                                    <span class="style-switch__swatch" style="background:${s.swatch}"></span>
+                                    <span>${s.name}<small>${s.desc}</small></span>
+                                </button>`).join('')}
+                        </div>
+                    </div>
+                    <div class="article-body ${saved}" id="article-body">${(typeof marked !== 'undefined' ? marked.parse(post.content || '') : (post.content || ''))}</div>
+                    ${navHtml}
+                </div>
+            </article>
+        `;
+
+        const sw = document.getElementById('style-switch');
+        document.getElementById('style-btn').addEventListener('click', e => { e.stopPropagation(); sw.classList.toggle('is-open'); });
+        document.getElementById('style-menu').addEventListener('click', e => {
+            const opt = e.target.closest('.style-switch__opt'); if (!opt) return;
+            const sid = opt.dataset.id;
+            document.getElementById('article-body').className = 'article-body ' + sid;
+            document.getElementById('style-label').textContent = '排版：' + STYLES.find(s => s.id === sid).name;
+            document.querySelectorAll('.style-switch__opt').forEach(o => o.classList.toggle('is-active', o.dataset.id === sid));
+            localStorage.setItem(LS_KEY, sid);
+            sw.classList.remove('is-open');
+        });
+        document.addEventListener('click', () => sw.classList.remove('is-open'));
+
+        upgradeAudioPlayers(document.getElementById('article-body'));
+    }
+
+    /* 将文章内的 <audio> 替换为高级自定义控件，统一走全局播放器 */
+    function upgradeAudioPlayers(scope) {
+        scope.querySelectorAll('audio').forEach(audioEl => {
+            const src = audioEl.getAttribute('src');
+            if (!src) return;
+            const title = audioEl.dataset.title || audioEl.getAttribute('title') || '音频片段';
+            const player = document.createElement('div');
+            player.className = 'audio-player';
+            player.innerHTML = `
+                <button class="audio-player__btn" aria-label="播放">
+                    <svg class="ic-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    <svg class="ic-pause" viewBox="0 0 24 24"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+                </button>
+                <div class="audio-player__main">
+                    <div class="audio-player__title">${title}</div>
+                    <div class="audio-player__bar"><div class="audio-player__fill"></div></div>
+                    <div class="audio-player__time">0:00 / 0:00</div>
+                </div>`;
+            audioEl.parentNode.replaceChild(player, audioEl);
+
+            const btn = player.querySelector('.audio-player__btn');
+            btn.addEventListener('click', () => {
+                if (App.currentSnippet && App.currentSnippet !== player) App.currentSnippet.classList.remove('is-playing');
+                audio.src = src;
+                if (player.classList.contains('is-playing')) {
+                    audio.pause(); player.classList.remove('is-playing');
+                } else {
+                    audio.play(); player.classList.add('is-playing'); App.currentSnippet = player;
+                }
+            });
+
+            player.querySelector('.audio-player__bar').addEventListener('click', e => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const ratio = (e.clientX - rect.left) / rect.width;
+                if (audio.duration) audio.currentTime = ratio * audio.duration;
+            });
+        });
+    }
+
+    /* ============== 工具 ============== */
+    function stripMd(s) { return (s || '').replace(/[#>*`]/g, '').trim(); }
+    function formatDate(s) { return new Date(s).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }); }
+    function fmt(s) {
+        if (!s || isNaN(s)) return '0:00';
+        const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+        return m + ':' + (sec < 10 ? '0' : '') + sec;
+    }
+
+    /* ============== 导航：文章快速跳转 → 首页并滚动到时间流 ============== */
+    document.querySelectorAll('.nav__link[data-scroll]').forEach(a => {
+        a.addEventListener('click', e => {
+            e.preventDefault();
+            App.pendingScroll = a.dataset.scroll;
+            if (location.hash === '#/' || location.hash === '' ) { renderHome(); }
+            else location.hash = '#/';
+        });
+    });
+    document.querySelectorAll('[data-scroll]').forEach(el => {
+        if (el.classList.contains('nav__link')) return; // 导航已单独处理
+        el.addEventListener('click', e => {
+            e.preventDefault();
+            App.pendingScroll = el.dataset.scroll;
+            if (location.hash === '#/' || location.hash === '') renderHome();
+            else location.hash = '#/';
+        });
+    });
+    </script>
+</body>
+</html>
