@@ -87,7 +87,9 @@
                     </div>`;
                 }).join('');
                 card.innerHTML = `
-                    <img class="album-card__art" src="${album.cover}" alt="${album.title}">
+                    <div class="album-card__cover">
+                        <img class="album-card__art" src="${album.cover}" alt="${album.title}">
+                    </div>
                     <div class="album-card__body">
                         <h2 class="album-card__title">${album.title}</h2>
                         <p class="album-card__artist">${album.artist}</p>

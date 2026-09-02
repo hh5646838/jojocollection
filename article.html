@@ -44,19 +44,39 @@
         ];
         const LS_KEY = 'jojo-md-style';
         let currentAudio = null;
+        let articleAudioBound = false;
 
         document.addEventListener('DOMContentLoaded', () => {
             const id = new URLSearchParams(location.search).get('id');
             fetch('posts.json').then(r => r.json()).then(data => {
                 const post = (data.posts || []).find(p => p.id === id);
                 if (!post) { document.getElementById('article-root').innerHTML = '<p style="color:var(--text-dim);padding:60px 0">未找到该文章。</p>'; return; }
-                renderArticle(post);
+                renderArticle(post, data.posts || []);
             });
         });
 
-        function renderArticle(post) {
+        function renderArticle(post, allPosts) {
             const root = document.getElementById('article-root');
             const saved = localStorage.getItem(LS_KEY) || 'md-classic';
+
+            // 同一文章合集内的上一篇 / 下一篇（按发布日期排序）
+            const sibs = (allPosts || []).filter(p => p.collectionId === post.collectionId)
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+            const idx = sibs.findIndex(p => p.id === post.id);
+            const prevPost = idx > 0 ? sibs[idx - 1] : null;
+            const nextPost = (idx > -1 && idx < sibs.length - 1) ? sibs[idx + 1] : null;
+
+            const navHtml = (prevPost || nextPost) ? `
+                <nav class="post-nav">
+                    ${prevPost ? `<a class="post-nav__btn post-nav__prev" href="article.html?id=${encodeURIComponent(prevPost.id)}">
+                        <span class="post-nav__dir">← 上一篇</span>
+                        <span class="post-nav__title">${prevPost.title}</span>
+                    </a>` : `<span class="post-nav__btn post-nav__placeholder"></span>`}
+                    ${nextPost ? `<a class="post-nav__btn post-nav__next" href="article.html?id=${encodeURIComponent(nextPost.id)}">
+                        <span class="post-nav__dir">下一篇 →</span>
+                        <span class="post-nav__title">${nextPost.title}</span>
+                    </a>` : `<span class="post-nav__btn post-nav__placeholder"></span>`}
+                </nav>` : '';
 
             root.innerHTML = `
                 <a class="page__back" href="index.html#timeline">← 返回文章列表</a>
@@ -81,6 +101,7 @@
                 </div>
 
                 <div class="article-body ${saved}" id="article-body">${marked.parse(post.content || '')}</div>
+                ${navHtml}
             `;
 
             // 初始化当前排版名称
@@ -128,8 +149,6 @@
                 const btn = player.querySelector('.audio-player__btn');
                 const fill = player.querySelector('.audio-player__fill');
                 const time = player.querySelector('.audio-player__time');
-                let bound = false;
-
                 btn.addEventListener('click', () => {
                     if (currentAudio && currentAudio !== player) currentAudio.classList.remove('is-playing');
                     audioEl.src = src;
@@ -140,8 +159,8 @@
                     }
                 });
 
-                if (!bound) {
-                    bound = true;
+                if (!articleAudioBound) {
+                    articleAudioBound = true;
                     audioEl.addEventListener('timeupdate', () => {
                         if (!currentAudio) return;
                         const f = currentAudio.querySelector('.audio-player__fill');

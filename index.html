@@ -126,7 +126,7 @@
         function initPlayer() {
             if (!config.vinyl) return;
             const grid = document.getElementById('album-grid');
-            const tracks = config.vinyl.tracks;
+            const tracks = config.vinyl.tracks.slice(0, 8);
             const defaultId = config.vinyl.defaultTrackId;
 
             grid.innerHTML = '';
