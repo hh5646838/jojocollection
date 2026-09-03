@@ -62,6 +62,7 @@
 
     /* ============== 数据加载 ============== */
     document.addEventListener('DOMContentLoaded', () => {
+        if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
         loadData().then(() => {
             bindGlobalPlayer();
             window.addEventListener('hashchange', router);
@@ -94,6 +95,19 @@
             if (id) renderArticle(id);
             else renderHome();
         }
+
+        // 路由切换后回到页首（顶部菜单点击“文章”设置了 pendingScroll 时例外）
+        if (!App.pendingScroll) scrollToTop();
+    }
+
+    /* 立即滚到页首（绕过 html 的 scroll-behavior: smooth，避免切页后停在半路） */
+    function scrollToTop() {
+        const root = document.documentElement;
+        const prev = root.style.scrollBehavior;
+        root.style.scrollBehavior = 'auto';
+        try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); }
+        catch (e) { window.scrollTo(0, 0); }
+        root.style.scrollBehavior = prev;
     }
 
     /* ============== 全局播放器 ============== */
@@ -174,6 +188,20 @@
 
     function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt; }
 
+    // 把当前播放状态同步到所有控件（含因切页被重建的齿轮 / 播放键）
+    function syncPlayingClasses() {
+        const gm = document.getElementById('gear-main');
+        if (gm) gm.classList.toggle('is-spinning', isPlaying);
+        const gmi = document.getElementById('gear-mini');
+        if (gmi) gmi.classList.toggle('is-spinning', isPlaying);
+        const pm = document.getElementById('play-mini');
+        if (pm) pm.classList.toggle('is-playing', isPlaying);
+        const gb = document.getElementById('g-btn');
+        if (gb) gb.classList.toggle('is-playing', isPlaying);
+        const bar = document.getElementById('global-bar');
+        if (bar) bar.classList.toggle('is-playing', isPlaying);
+    }
+
     /* ============== 视图：首页 ============== */
     function renderHome() {
         const view = document.getElementById('view');
@@ -249,6 +277,7 @@
         initTimeline();
 
         syncUI();
+        syncPlayingClasses();
         if (App.pendingScroll) {
             const el = document.getElementById(App.pendingScroll);
             if (el) setTimeout(() => el.scrollIntoView({ behavior: 'smooth' }), 80);
